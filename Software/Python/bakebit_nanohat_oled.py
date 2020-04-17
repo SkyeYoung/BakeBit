@@ -72,53 +72,54 @@ display_is_on = True
 lock = threading.Lock()
 
 
+def page_indicator(func):
+    def wrapper(*args, **kw):
+        if showPageIndicator:
+            page_count = len(render.pages)
+            dot_width = 4
+            dot_padding = 2
+            dot_x = width - dot_width - 1
+            dot_y = (height - page_count * dot_width - (page_count - 1) * dot_padding) / 2
+            for i in range(page_count):
+                render.draw_pen.rectangle((dot_x, dot_y, dot_x + dot_width, dot_y + dot_width), outline=255,
+                                          fill=255 if i == page_index else 0)
+                dot_y = dot_y + dot_width + dot_padding
+        return func(*args, **kw)
+
+    return wrapper
+
+
 class RenderPage:
     def __init__(self, draw_pen, is_drawing):
         self.draw_pen = draw_pen
         self.is_drawing = is_drawing
 
+        self.page_sleep_or_shutdown_sleep = functools.partial(self.__page_sleep_or_shutdown, True)
+        self.page_sleep_or_shutdown_shutdown = functools.partial(self.__page_sleep_or_shutdown, False)
+        self.page_shutdown_no = functools.partial(self.__page_shutdown, True)
+        self.page_shutdown_yes = functools.partial(self.__page_shutdown, False)
+
         self.pages = (
             self.page_ip, self.page_info, self.page_sleep_or_shutdown_sleep, self.page_sleep_or_shutdown_shutdown,
             self.page_shutdown_no, self.page_shutdown_yes, self.page_closing)
 
-        self.page_sleep_or_shutdown_sleep = functools.partial(self.__page_sleep_or_shutdown, True)
-        self.page_sleep_or_shutdown_shutdown = functools.partial(self.__page_sleep_or_shutdown, False)
-        self.page_shutdown_no = functools.partial(self.__page_shutdown, False)
-        self.page_shutdown_yes = functools.partial(self.__page_shutdown, True)
-
-    def page_indicator(self, func):
-        def wrapper(*args, **kw):
-            if showPageIndicator:
-                page_count = len(self.pages)
-                dot_width = 4
-                dot_padding = 2
-                dot_x = width - dot_width - 1
-                dot_y = (height - page_count * dot_width - (page_count - 1) * dot_padding) / 2
-                for i in range(page_count):
-                    self.draw_pen.rectangle((dot_x, dot_y, dot_x + dot_width, dot_y + dot_width), outline=255,
-                                            fill=255 if i == page_index else 0)
-                    dot_y = dot_y + dot_width + dot_padding
-            return func(*args, **kw)
-
-        return wrapper
-
     def __page_sleep_or_shutdown(self, is_first):
-        self.draw_pen.text((2, 2), 'Sleep or Shutdown?', font=font_bold_14, fill=255)
+        self.draw_pen.text((2, 2), 'You wanna?', font=font_bold_14, fill=255)
 
-        self.draw_pen.rectangle((2, 20, width - 4, 20 + 16), outline=0, fill=0)
-        self.draw_pen.text((4, 22), 'Sleep', font=font_regular_11, fill=255 if is_first else 0)
+        self.draw_pen.rectangle((2, 20, width - 4, 20 + 16), outline=0, fill=255 if is_first else 0)
+        self.draw_pen.text((4, 22), 'Sleep', font=font_regular_11, fill=0 if is_first else 255)
 
-        self.draw_pen.rectangle((2, 38, width - 4, 38 + 16), outline=0, fill=255)
-        self.draw_pen.text((4, 40), 'Shutdown', font=font_regular_11, fill=0 if is_first else 255)
+        self.draw_pen.rectangle((2, 38, width - 4, 38 + 16), outline=0, fill=0 if is_first else 255)
+        self.draw_pen.text((4, 40), 'Shutdown', font=font_regular_11, fill=255 if is_first else 0)
 
     def __page_shutdown(self, is_first):
         self.draw_pen.text((2, 2), 'Shutdown?', font=font_bold_14, fill=255)
 
-        self.draw_pen.rectangle((2, 20, width - 4, 20 + 16), outline=0, fill=0)
-        self.draw_pen.text((4, 22), 'Yes', font=font_regular_11, fill=255 if is_first else 0)
+        self.draw_pen.rectangle((2, 20, width - 4, 20 + 16), outline=0, fill=255 if is_first else 0)
+        self.draw_pen.text((4, 22), 'Yes', font=font_regular_11, fill=0 if is_first else 255)
 
-        self.draw_pen.rectangle((2, 38, width - 4, 38 + 16), outline=0, fill=255)
-        self.draw_pen.text((4, 40), 'No', font=font_regular_11, fill=0 if is_first else 255)
+        self.draw_pen.rectangle((2, 38, width - 4, 38 + 16), outline=0, fill=0 if is_first else 255)
+        self.draw_pen.text((4, 40), 'No', font=font_regular_11, fill=255 if is_first else 0)
 
     @page_indicator
     def page_ip(self):
@@ -276,6 +277,7 @@ def receive_signal(signum, stack):
             if is_page(2):  # 选择待机或关机页--待机
                 oled.sendCommand(oled.SeeedOLED_Display_Off_Cmd)
                 display_is_on = False
+                draw_page(0)
             elif is_page(3):  # 选择待机或关机页--关机
                 draw_page(4)
             elif is_page(4):  # 选择是否关机--否
