@@ -295,23 +295,28 @@ def receive_signal(signum, stack):
         # print('K2 pressed')
 
         if display_is_on:
+            # 正向
             if is_page(0):
                 draw_page(1)
             elif is_page(2):
                 draw_page(3)
             elif is_page(4):
                 draw_page(5)
-
-    if signum == signal.SIGALRM:
-        # print('K3 pressed')
-
-        if display_is_on:
-            if is_page(1):
+            # 逆向
+            elif is_page(1):
                 draw_page(0)
             elif is_page(3):
                 draw_page(2)
             elif is_page(5):
                 draw_page(4)
+
+    if signum == signal.SIGALRM:
+        # print('K3 pressed')
+
+        if display_is_on:
+            # 在其它页面则起返回作用
+            if is_page(0) is False or is_page(1) is False:
+                draw_page(0)
 
 
 """页面"""
