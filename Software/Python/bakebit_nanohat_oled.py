@@ -52,7 +52,7 @@ import bakebit_128_64_oled as oled
 
 width = 128
 height = 64
-showPageIndicator = False
+showPageIndicator = True
 
 """"""
 image = Image.new('1', (width, height))
@@ -73,16 +73,22 @@ lock = threading.Lock()
 
 
 def page_indicator(func):
+    """显示页面指示器
+    :param func:
+    :return:
+    """
+
     def wrapper(*args, **kw):
         if showPageIndicator:
-            page_count = len(render.pages)
+            page_count = render.normal_page_count
             dot_width = 4
             dot_padding = 2
             dot_x = width - dot_width - 1
             dot_y = (height - page_count * dot_width - (page_count - 1) * dot_padding) / 2
             for i in range(page_count):
-                render.draw_pen.rectangle((dot_x, dot_y, dot_x + dot_width, dot_y + dot_width), outline=255,
-                                          fill=255 if i == page_index else 0)
+                render.draw_pen.ellipse((dot_x, dot_y, dot_x + dot_width, dot_y + dot_width), outline=255,
+                                        fill=255 if i == pageIndex else 0)
+
                 dot_y = dot_y + dot_width + dot_padding
         return func(*args, **kw)
 
@@ -90,6 +96,8 @@ def page_indicator(func):
 
 
 class RenderPage:
+    """所有的页面"""
+
     def __init__(self, draw_pen, is_drawing):
         self.draw_pen = draw_pen
         self.is_drawing = is_drawing
@@ -102,6 +110,7 @@ class RenderPage:
         self.pages = (
             self.page_ip, self.page_info, self.page_sleep_or_shutdown_sleep, self.page_sleep_or_shutdown_shutdown,
             self.page_shutdown_no, self.page_shutdown_yes, self.page_closing)
+        self.normal_page_count = 2
 
     def __page_sleep_or_shutdown(self, is_first):
         self.draw_pen.text((2, 2), 'You wanna?', font=font_bold_14, fill=255)
@@ -116,10 +125,10 @@ class RenderPage:
         self.draw_pen.text((2, 2), 'Shutdown?', font=font_bold_14, fill=255)
 
         self.draw_pen.rectangle((2, 20, width - 4, 20 + 16), outline=0, fill=255 if is_first else 0)
-        self.draw_pen.text((4, 22), 'Yes', font=font_regular_11, fill=0 if is_first else 255)
+        self.draw_pen.text((4, 22), 'No', font=font_regular_11, fill=0 if is_first else 255)
 
         self.draw_pen.rectangle((2, 38, width - 4, 38 + 16), outline=0, fill=0 if is_first else 255)
-        self.draw_pen.text((4, 40), 'No', font=font_regular_11, fill=255 if is_first else 0)
+        self.draw_pen.text((4, 40), 'Yes', font=font_regular_11, fill=255 if is_first else 0)
 
     @page_indicator
     def page_ip(self):
@@ -178,16 +187,12 @@ class RenderPage:
             lock.release()
 
             if not is_drawing_close_page:
-                lock.acquire()
-                self.is_drawing = True
-                lock.release()
-
-                oled.clearDisplay()
-
+                oled.sendCommand(oled.SeeedOLED_Display_Off_Cmd)
                 break
             else:
                 time.sleep(.1)
                 continue
+
         time.sleep(1)
         os.system('systemctl poweroff')
 
